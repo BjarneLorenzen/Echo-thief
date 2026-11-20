@@ -43,13 +43,35 @@
       <p id="control-hint" class="hint">Tilt your phone to steer.<br>Hold it the way that feels neutral — that's "still".</p>
       <p id="perm-note" class="hint warn hidden"></p>
     </div>
+    <button id="btn-settings" class="icon-btn corner left" aria-label="Settings">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+    </button>
     <button id="btn-mute" class="icon-btn corner" aria-label="Toggle sound"></button>
+  </section>
+
+  <section id="settings" class="overlay hidden">
+    <div class="panel">
+      <h2>SETTINGS</h2>
+      <div class="setting">
+        <span class="label">MUSIC STYLE</span>
+        <div id="genre-list" class="chips" role="radiogroup" aria-label="Music style"></div>
+        <p id="genre-desc" class="hint tight"></p>
+      </div>
+      <div class="preview" aria-live="off">
+        <div id="preview-dots" class="dots"></div>
+        <p class="hint tight">Every echo adds an instrument. Its pitch follows the echo's height, its stereo position follows left&nbsp;↔&nbsp;right.</p>
+      </div>
+      <label class="slider"><span class="label">MUSIC</span><input id="vol-music" type="range" min="0" max="100" step="1"></label>
+      <label class="slider"><span class="label">EFFECTS</span><input id="vol-sfx" type="range" min="0" max="100" step="1"></label>
+      <button id="btn-settings-done" class="btn primary">DONE</button>
+    </div>
   </section>
 
   <section id="pause" class="overlay hidden">
     <div class="panel">
       <h2>PAUSED</h2>
       <button id="btn-resume" class="btn primary">RESUME</button>
+      <button id="btn-pause-settings" class="btn ghost">SETTINGS</button>
       <button id="btn-quit" class="btn ghost">MENU</button>
       <p class="hint">Hold your phone in a comfortable neutral position before resuming.</p>
     </div>

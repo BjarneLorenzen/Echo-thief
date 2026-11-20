@@ -1,11 +1,6 @@
-// Echo Thief – synthesized audio (no asset files). Ambient pad, spawn chime, shatter, pickups.
+// Echo Thief – synthesized audio (no asset files). Adaptive music (see music.js) plus sound effects.
+import { Music } from './music.js';
 
-const CHORDS = [
-  [110.0, 164.81, 261.63, 329.63], // Am(add9-ish)
-  [87.31, 130.81, 220.0, 329.63],  // Fmaj7
-  [98.0, 146.83, 246.94, 293.66],  // G
-  [82.41, 123.47, 196.0, 293.66],  // Em7
-];
 const PENTA = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
 
 export class Sound {
@@ -13,7 +8,20 @@ export class Sound {
     this.ctx = null;
     this.muted = false;
     try { this.muted = localStorage.getItem('echoThief.muted') === '1'; } catch { /* storage unavailable */ }
-    this.pad = null;
+    this.music = null;
+    this.prefs = { genre: 'ambient', musicVol: 0.8, sfxVol: 0.9 };
+    this.voices = () => [];
+  }
+
+  /** Apply user settings; safe to call before audio is unlocked. */
+  configure({ genre, musicVol, sfxVol }) {
+    if (genre !== undefined) this.prefs.genre = genre;
+    if (musicVol !== undefined) this.prefs.musicVol = musicVol;
+    if (sfxVol !== undefined) this.prefs.sfxVol = sfxVol;
+    if (!this.ctx) return;
+    this.music.setGenre(this.prefs.genre);
+    this.music.setVolume(this.prefs.musicVol);
+    this.sfx.gain.setTargetAtTime(this.prefs.sfxVol, this.ctx.currentTime, 0.05);
   }
 
   /** Must be called from a user gesture (iOS). Safe to call repeatedly. */
@@ -29,6 +37,9 @@ export class Sound {
       comp.threshold.value = -14;
       comp.ratio.value = 4;
       this.master.connect(comp).connect(ctx.destination);
+      this.sfx = ctx.createGain();
+      this.sfx.gain.value = this.prefs.sfxVol;
+      this.sfx.connect(this.master);
 
       // Shared echo-y delay for chimes and pickups.
       this.fx = ctx.createGain();
@@ -43,8 +54,12 @@ export class Sound {
       tone.frequency.value = 2600;
       this.fx.connect(delay);
       delay.connect(tone).connect(fb).connect(delay);
-      tone.connect(wet).connect(this.master);
-      this.fx.connect(this.master);
+      tone.connect(wet).connect(this.sfx);
+      this.fx.connect(this.sfx);
+
+      this.music = new Music(ctx, this.master);
+      this.music.voices = () => this.voices();
+      this.configure({});
 
       // Play a silent buffer to fully unlock iOS audio.
       const b = ctx.createBuffer(1, 1, 22050);
@@ -62,63 +77,27 @@ export class Sound {
     if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.05);
   }
 
-  // ---------- Ambient music ----------
-  startMusic() {
-    if (!this.ctx) return;
-    const ctx = this.ctx;
-    if (!this.pad) {
-      const out = ctx.createGain();
-      out.gain.value = 0;
-      const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 700;
-      lp.Q.value = 0.7;
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = 0.06;
-      const lfoAmt = ctx.createGain();
-      lfoAmt.gain.value = 320;
-      lfo.connect(lfoAmt).connect(lp.frequency);
-      lfo.start();
-      lp.connect(out).connect(this.master);
-
-      const voices = CHORDS[0].map((f, i) => {
-        const g = ctx.createGain();
-        g.gain.value = i === 0 ? 0.32 : 0.2;
-        const a = ctx.createOscillator();
-        const b = ctx.createOscillator();
-        a.type = 'triangle';
-        b.type = 'sine';
-        a.frequency.value = f;
-        b.frequency.value = f;
-        a.detune.value = -7;
-        b.detune.value = 6;
-        a.connect(g);
-        b.connect(g);
-        g.connect(lp);
-        a.start();
-        b.start();
-        return [a, b];
-      });
-      this.pad = { out, voices, chord: 0, timer: null };
-    }
-    const pad = this.pad;
-    pad.out.gain.cancelScheduledValues(ctx.currentTime);
-    pad.out.gain.setTargetAtTime(0.16, ctx.currentTime, 1.2);
-    if (!pad.timer) {
-      pad.timer = setInterval(() => {
-        pad.chord = (pad.chord + 1) % CHORDS.length;
-        const t = this.ctx.currentTime;
-        CHORDS[pad.chord].forEach((f, i) => {
-          for (const o of pad.voices[i]) o.frequency.setTargetAtTime(f, t, 1.4);
-        });
-      }, 8000);
+  // ---------- Music ----------
+  /** Music mood per game phase: 'title' | 'play' | 'dying' | 'over' | 'preview'. */
+  musicPhase(phase) {
+    const m = this.music;
+    if (!m) return;
+    m.play();
+    switch (phase) {
+      case 'play': case 'preview': m.muffle(null, 0.2); m.setLevel(1, 0.5); break;
+      case 'title': m.muffle(null, 0.3); m.setLevel(0.6, 0.8); break;
+      case 'dying': m.muffle(260, 0.12); m.setLevel(0.7, 0.3); break;
+      case 'over': m.muffle(1400, 0.6); m.setLevel(0.5, 0.8); break;
     }
   }
 
-  /** Lower the music (e.g. on title / game over) or silence it. */
-  duckMusic(level = 0.06) {
-    if (!this.ctx || !this.pad) return;
-    this.pad.out.gain.setTargetAtTime(level, this.ctx.currentTime, 0.6);
+  /** Brief "underwater" filter dip, used while echoes are faded out. */
+  musicDip(seconds) {
+    const m = this.music;
+    if (!m) return;
+    m.muffle(900, 0.15);
+    clearTimeout(this._dipTimer);
+    this._dipTimer = setTimeout(() => m.muffle(null, 0.4), seconds * 1000);
   }
 
   suspend() {
@@ -148,7 +127,7 @@ export class Sound {
   chime(n = 0) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime + 0.01;
-    const base = 523.25 * Math.pow(2, PENTA[n % PENTA.length] / 12);
+    const base = this.music ? this.music.chimeFreq(n) : 523.25 * Math.pow(2, PENTA[n % PENTA.length] / 12);
     this._tone(base, t, 1.4, { gain: 0.09 });
     this._tone(base * 2.01, t, 0.9, { gain: 0.035 });
     this._tone(base * 1.5, t + 0.07, 1.1, { gain: 0.04 });
@@ -180,8 +159,8 @@ export class Sound {
   shatter() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime + 0.005;
-    this._noise(t, 0.7, { from: 5000, to: 400, gain: 0.35, q: 0.8, dest: this.master });
-    this._tone(110, t, 0.5, { type: 'sine', gain: 0.35, to: 38, dest: this.master });
+    this._noise(t, 0.7, { from: 5000, to: 400, gain: 0.35, q: 0.8, dest: this.sfx });
+    this._tone(110, t, 0.5, { type: 'sine', gain: 0.35, to: 38, dest: this.sfx });
     for (let i = 0; i < 7; i++) {
       const f = 1400 + Math.random() * 2600;
       this._tone(f, t + i * 0.025 + Math.random() * 0.02, 0.25 + Math.random() * 0.3, {

@@ -1,6 +1,7 @@
 // Echo Thief – rendering, input, screens and the main loop.
 import { CFG, Game } from './core.js';
 import { Sound } from './audio.js';
+import { GENRES, GENRE_IDS } from './music.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -17,9 +18,13 @@ const ui = {
   goTime: $('go-time'), goEchoes: $('go-echoes'), goSparks: $('go-sparks'),
   goScore: $('go-score'), goBest: $('go-best'), goNewBest: $('go-newbest'),
   haptic: $('haptic'),
+  settings: $('settings'), settingsBtn: $('btn-settings'), pauseSettings: $('btn-pause-settings'),
+  settingsDone: $('btn-settings-done'), genreList: $('genre-list'), genreDesc: $('genre-desc'),
+  previewDots: $('preview-dots'), volMusic: $('vol-music'), volSfx: $('vol-sfx'),
 };
 
 const PLAYER_HUE = 186;
+const ECHO_HUE = (i) => (275 + i * 137.508) % 360; // same hue sequence as core.js echoes
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -253,7 +258,9 @@ canvas.addEventListener('pointermove', (e) => {
 const endStick = (e) => { if (e.pointerId === stick.id) stick.id = null; };
 canvas.addEventListener('pointerup', endStick);
 canvas.addEventListener('pointercancel', endStick);
-document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+document.addEventListener('touchmove', (e) => {
+  if (!(e.target instanceof Element && e.target.closest('input[type=range]'))) e.preventDefault();
+}, { passive: false });
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 const keys = new Set();
@@ -264,6 +271,10 @@ const KEYMAP = {
 window.addEventListener('keydown', (e) => {
   if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); }
   if (e.code === 'KeyC' && state === 'playing') recenterTilt();
+  if (settingsFrom) {
+    if (e.code === 'Escape') closeSettings();
+    return;
+  }
   if (e.code === 'Escape' || e.code === 'KeyP') {
     if (state === 'playing') pauseGame();
     else if (state === 'paused') resumeGame();
@@ -364,7 +375,7 @@ function beginRun() {
   show(ui.over, false);
   show(ui.pause, false);
   show(ui.hud, true);
-  sound.startMusic();
+  sound.musicPhase('play');
   burst(game.player.x, game.player.y, PLAYER_HUE, 24, 26, 0.7);
 }
 
@@ -398,7 +409,7 @@ function toMenu() {
   show(ui.title, true);
   refreshTitle();
   sound.resume();
-  sound.duckMusic(0.07);
+  sound.musicPhase('title');
 }
 
 function showGameOver() {
@@ -417,7 +428,7 @@ function showGameOver() {
   // Avoid an accidental instant retry from a tap that was mid-flight.
   ui.retry.disabled = ui.menu.disabled = true;
   setTimeout(() => { ui.retry.disabled = ui.menu.disabled = false; }, 600);
-  sound.duckMusic(0.06);
+  sound.musicPhase('over');
 }
 
 ui.start.addEventListener('click', onStart);
@@ -437,13 +448,142 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     if (state === 'playing') pauseGame();
     sound.suspend();
-  } else if (state !== 'paused') {
+  } else if (state !== 'paused' || settingsFrom) {
     sound.resume();
   }
 });
 window.addEventListener('pagehide', () => { if (state === 'playing') pauseGame(); });
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+
+// ---------------------------------------------------------------------------
+// Settings: music style + volumes (persisted)
+// ---------------------------------------------------------------------------
+const SETTINGS_KEY = 'echoThief.settings';
+const settings = { genre: 'ambient', musicVol: 0.8, sfxVol: 0.9 };
+try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* ignore */ }
+if (!GENRES[settings.genre]) settings.genre = 'ambient';
+sound.configure(settings);
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* ignore */ }
+}
+
+let settingsFrom = null; // 'title' | 'pause' while the settings screen is open
+let previewStart = 0;
+const PREVIEW_MAX = 8;
+const PREVIEW_STEP = 2.6; // seconds between preview echoes joining in
+
+/** Number of demo echoes in the preview; builds up, then starts over. */
+function previewCount() {
+  // 0, 1, … PREVIEW_MAX, hold for a few beats, then start over.
+  const k = Math.floor((clock - previewStart) / PREVIEW_STEP) % (PREVIEW_MAX + 3);
+  return Math.min(PREVIEW_MAX, k);
+}
+
+/** What the music engine hears: one voice per echo on the field (or demo ghosts in the preview). */
+function musicVoices() {
+  if (settingsFrom) {
+    const n = previewCount();
+    const out = [];
+    const p = { x: 0, y: 0 };
+    for (let i = 0; i < n; i++) {
+      attractPos(i, clock, p);
+      out.push({ id: i, x: p.x / worldW, y: p.y / worldH });
+    }
+    return out;
+  }
+  if (!game || state !== 'playing') return [];
+  const out = [];
+  for (const e of game.echoes) {
+    if (e.state === 'warning') continue;
+    out.push({ id: e.index, x: e.x / game.W, y: e.y / game.H, mute: e.state !== 'active' || game.fading });
+  }
+  return out;
+}
+sound.voices = musicVoices;
+
+function buildSettingsUI() {
+  ui.genreList.innerHTML = '';
+  for (const id of GENRE_IDS) {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.dataset.genre = id;
+    b.textContent = GENRES[id].name;
+    b.addEventListener('click', () => {
+      settings.genre = id;
+      sound.configure({ genre: id });
+      previewStart = clock; // restart the build-up so the new style can be heard from scratch
+      saveSettings();
+      refreshSettingsUI();
+    });
+    ui.genreList.appendChild(b);
+  }
+  ui.previewDots.innerHTML = '';
+  for (let i = 0; i < PREVIEW_MAX; i++) {
+    const d = document.createElement('i');
+    d.style.color = `hsl(${ECHO_HUE(i)}, 95%, 68%)`;
+    ui.previewDots.appendChild(d);
+  }
+  ui.volMusic.addEventListener('input', () => {
+    settings.musicVol = ui.volMusic.value / 100;
+    sound.configure({ musicVol: settings.musicVol });
+  });
+  ui.volSfx.addEventListener('input', () => {
+    settings.sfxVol = ui.volSfx.value / 100;
+    sound.configure({ sfxVol: settings.sfxVol });
+  });
+  ui.volSfx.addEventListener('change', () => { sound.chime(2); saveSettings(); });
+  ui.volMusic.addEventListener('change', saveSettings);
+}
+
+function refreshSettingsUI() {
+  for (const b of ui.genreList.children) b.setAttribute('aria-checked', String(b.dataset.genre === settings.genre));
+  ui.genreDesc.textContent = GENRES[settings.genre].desc;
+  ui.volMusic.value = Math.round(settings.musicVol * 100);
+  ui.volSfx.value = Math.round(settings.sfxVol * 100);
+}
+
+let lastDots = -1;
+function updatePreviewDots() {
+  const n = settingsFrom && settings.genre !== 'off' ? previewCount() : 0;
+  if (n === lastDots) return;
+  lastDots = n;
+  [...ui.previewDots.children].forEach((d, i) => d.classList.toggle('on', i < n));
+}
+
+function openSettings() {
+  settingsFrom = state === 'paused' ? 'pause' : 'title';
+  sound.unlock();
+  sound.resume();
+  previewStart = clock;
+  refreshSettingsUI();
+  show(settingsFrom === 'pause' ? ui.pause : ui.title, false);
+  show(ui.settings, true);
+  sound.musicPhase('preview');
+}
+
+function closeSettings() {
+  const from = settingsFrom;
+  settingsFrom = null;
+  lastDots = -1;
+  saveSettings();
+  show(ui.settings, false);
+  if (from === 'pause') {
+    show(ui.pause, true);
+    sound.suspend();
+  } else {
+    show(ui.title, true);
+    sound.musicPhase('title');
+  }
+}
+
+buildSettingsUI();
+ui.settingsBtn.addEventListener('click', openSettings);
+ui.pauseSettings.addEventListener('click', openSettings);
+ui.settingsDone.addEventListener('click', closeSettings);
 
 // ---------------------------------------------------------------------------
 // Effects
@@ -483,12 +623,14 @@ function handleEvents() {
         break;
       case 'fade':
         sound.fade();
+        sound.musicDip(CFG.FADE_DURATION);
         flash = { t: 0.6, hue: 190 };
         burst(ev.x, ev.y, 190, 30, 35, 0.8);
         floaters.push({ x: ev.x, y: ev.y, text: 'FADE', life: 1.1, hue: 190 });
         break;
       case 'death':
         sound.shatter();
+        sound.musicPhase('dying');
         haptic([60, 40, 90]);
         shake = 1;
         burst(ev.x, ev.y, PLAYER_HUE, 46, 60, 1.2, 75);
@@ -721,40 +863,48 @@ function drawParticles() {
   }
 }
 
-// Title-screen ambience: a few ghosts drifting on Lissajous curves.
+// Title-screen ambience: ghosts drifting on Lissajous curves. In the settings preview the
+// number of ghosts grows with the music, and ghost i is the echo driving music layer i.
+function attractPos(i, t, out) {
+  const fx = 0.19 + ((i * 0.37) % 0.17);
+  const fy = 0.17 + ((i * 0.53) % 0.15);
+  const ph = i * 2.1;
+  const ax = 0.3 + ((i * 0.29) % 0.09);
+  const ay = 0.26 + ((i * 0.41) % 0.11);
+  out.x = worldW / 2 + Math.sin(t * fx + ph) * worldW * ax;
+  out.y = worldH / 2 + Math.sin(t * fy * 1.3 + ph * 1.7) * worldH * ay;
+  return out;
+}
+const TITLE_GHOSTS = 3;
+function attractCount() {
+  return settingsFrom === 'title' ? previewCount() : TITLE_GHOSTS;
+}
+
 function drawAttract() {
   const t = clock;
-  const W = worldW, H = worldH;
-  const ghosts = [
-    { hue: 275, ax: 0.36, ay: 0.3, fx: 0.31, fy: 0.23, ph: 0 },
-    { hue: 32, ax: 0.3, ay: 0.36, fx: 0.19, fy: 0.29, ph: 2 },
-    { hue: 150, ax: 0.38, ay: 0.28, fx: 0.27, fy: 0.17, ph: 4 },
-  ];
-  for (const g of ghosts) {
-    const x = W / 2 + Math.sin(t * g.fx + g.ph) * W * g.ax;
-    const y = H / 2 + Math.sin(t * g.fy * 1.3 + g.ph * 1.7) * H * g.ay;
-    const x2 = W / 2 + Math.sin((t - 0.05) * g.fx + g.ph) * W * g.ax;
-    const y2 = H / 2 + Math.sin((t - 0.05) * g.fy * 1.3 + g.ph * 1.7) * H * g.ay;
-    const spr = glowSprite(g.hue, 85, 50);
+  const n = attractCount();
+  const p = { x: 0, y: 0 }, q = { x: 0, y: 0 }, k2 = { x: 0, y: 0 };
+  for (let i = 0; i < n; i++) {
+    const hue = ECHO_HUE(i);
+    attractPos(i, t, p);
+    attractPos(i, t - 0.05, q);
+    const spr = glowSprite(hue, 85, 50);
     ctx.globalCompositeOperation = 'lighter';
     for (let k = 6; k >= 1; k--) {
-      const tk = t - k * 0.12;
-      drawGlow(spr,
-        W / 2 + Math.sin(tk * g.fx + g.ph) * W * g.ax,
-        H / 2 + Math.sin(tk * g.fy * 1.3 + g.ph * 1.7) * H * g.ay,
-        CFG.ECHO_R * (2.6 - k * 0.25), 0.08 * (1 - k / 7));
+      attractPos(i, t - k * 0.12, k2);
+      drawGlow(spr, k2.x, k2.y, CFG.ECHO_R * (2.6 - k * 0.25), 0.08 * (1 - k / 7));
     }
-    drawGlow(spr, x, y, CFG.ECHO_R * 3.6, 0.35);
+    drawGlow(spr, p.x, p.y, CFG.ECHO_R * 3.6, 0.35);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 0.55;
-    ctx.fillStyle = `hsl(${g.hue}, 55%, 28%)`;
+    ctx.fillStyle = `hsl(${hue}, 55%, 28%)`;
     ctx.beginPath();
-    ctx.arc(x, y, CFG.ECHO_R, 0, TAU);
+    ctx.arc(p.x, p.y, CFG.ECHO_R, 0, TAU);
     ctx.fill();
-    ctx.strokeStyle = `hsl(${g.hue}, 95%, 68%)`;
+    ctx.strokeStyle = `hsl(${hue}, 95%, 68%)`;
     ctx.lineWidth = 0.35;
     ctx.stroke();
-    drawEyes(x, y, CFG.ECHO_R, x - x2, y - y2, `hsl(${g.hue}, 100%, 82%)`, 0.6);
+    drawEyes(p.x, p.y, CFG.ECHO_R, p.x - q.x, p.y - q.y, `hsl(${hue}, 100%, 82%)`, 0.6);
   }
 }
 
@@ -875,6 +1025,7 @@ function frame(now) {
   }
 
   render(dt);
+  updatePreviewDots();
   requestAnimationFrame(frame);
 }
 
@@ -898,5 +1049,6 @@ window.echoThief = {
   get best() { return best; },
   input,
   tilt,
+  sound,
   start: beginRun,
 };

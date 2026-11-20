@@ -1,6 +1,6 @@
 // Echo Thief service worker: cache the app shell so it works offline from the Home Screen.
 // Bump VERSION whenever any cached file changes.
-const VERSION = 'echo-thief-v2';
+const VERSION = 'echo-thief-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './js/main.js',
   './js/core.js',
   './js/audio.js',
+  './js/music.js',
   './manifest.webmanifest',
   './icons/icon.svg',
   './icons/apple-touch-icon.png',

@@ -90,6 +90,7 @@ canvas#game {
   top: calc(var(--safe-t) + 12px);
   right: calc(var(--safe-r) + 14px);
 }
+.icon-btn.corner.left { right: auto; left: calc(var(--safe-l) + 14px); }
 
 /* ---------- Overlays ---------- */
 .overlay {
@@ -193,6 +194,40 @@ h2.shatter { color: #ff7aa8; text-shadow: 0 0 20px rgba(255, 90, 140, 0.8); }
 
 .hidden, #hud.hidden { display: none; }
 .overlay.hidden { display: flex; }
+
+/* ---------- Settings ---------- */
+#settings .panel { gap: 14px; }
+#settings h2 { font-size: 32px; }
+.setting { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.setting > .label, .slider .label { font-size: 11px; letter-spacing: 0.18em; color: var(--dim); text-align: left; }
+.chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.chip {
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(233, 246, 255, 0.18);
+  background: rgba(10, 14, 30, 0.6);
+  color: var(--dim);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+.chip[aria-checked="true"] {
+  color: var(--ink);
+  border-color: var(--neon-2);
+  box-shadow: 0 0 14px rgba(199, 125, 255, 0.45), inset 0 0 10px rgba(199, 125, 255, 0.2);
+}
+.hint.tight { margin: 0; min-height: 1.5em; }
+.preview { width: 100%; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.dots { display: flex; gap: 7px; height: 14px; align-items: center; }
+.dots i {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 1.5px solid currentColor; opacity: 0.25; transition: opacity 0.25s, transform 0.25s;
+}
+.dots i.on { opacity: 1; transform: scale(1.15); box-shadow: 0 0 8px currentColor; background: currentColor; }
+.slider { width: 100%; display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 12px; }
+.slider input { width: 100%; accent-color: var(--neon); touch-action: auto; height: 28px; }
 
 /* Ask for portrait on touch devices in landscape. */
 #rotate { display: none; background: var(--bg); z-index: 10; }

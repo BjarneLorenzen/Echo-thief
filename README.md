@@ -34,7 +34,9 @@ Any static HTTPS host works too (Netlify, Cloudflare Pages, Vercel…).
 - **Sparks** (v1.1): grab them for bonus points. They lure you into moving around, which makes your future echoes more chaotic.
 - **Fade** (v1.1): a cyan ring power-up. It makes every echo vanish and become harmless for 3 s. The echoes blink back in during the last 0.8 s so you have time to react.
 
-Audio is all synthesized with Web Audio: an ambient pad, a chime when an echo spawns that rises in pitch as more echoes arrive, a shatter sound on death, and pickup sounds. On death you also get haptic feedback, via `navigator.vibrate` where supported, or the native-switch haptic trick on iOS 18+ (best effort; earlier iOS versions have no web haptics API). Your best score and the mute setting are stored in `localStorage`.
+**Adaptive music:** every echo on the field adds its own instrument layer to the soundtrack, so the music builds up as the danger does. A melodic echo literally *plays its path*: its pitch follows how high the echo is in the arena, and its stereo position follows where it is left to right. When a Fade power-up hides the echoes, their instruments drop out with them. Pick the style under **Settings** (the sliders icon on the title screen, or **Settings** in the pause menu): **Ambient**, **Synthwave**, **Lo-fi**, **Chiptune**, **Techno**, or **Off**. The settings screen plays a live preview that adds an echo every few seconds, and also has music and effects volume sliders.
+
+All other audio is also synthesized with Web Audio: a chime when an echo spawns that rises in pitch as more echoes arrive, a shatter sound on death, and pickup sounds. On death you also get haptic feedback, via `navigator.vibrate` where supported, or the native-switch haptic trick on iOS 18+ (best effort; earlier iOS versions have no web haptics API). Your best score, mute and music settings are stored in `localStorage`.
 
 ## Project layout
 
@@ -43,14 +45,15 @@ index.html            App shell, overlays (title / pause / game over), HUD
 css/style.css         Neon styling, safe-area layout
 js/core.js            Pure deterministic simulation (no DOM): physics, recording, echoes, pickups
 js/main.js            Rendering, input (tilt / drag / keys), screens, game loop
-js/audio.js           Synthesized music & SFX
+js/audio.js           Sound effects, volume buses, music phases
+js/music.js           Adaptive step-sequencer music: genres, instruments, echo layers
 sw.js                 Service worker (offline cache) – bump VERSION when files change
 manifest.webmanifest  PWA manifest (standalone, portrait)
 icons/                App icons (SVG source + PNGs)
 tests/core.test.mjs   Unit tests for the simulation
 ```
 
-All tuning values (speeds, radii, intervals, timings) live in `CFG` at the top of `js/core.js`. The tilt sensitivity (`TILT_RANGE`, `TILT_DEAD`) is at the top of the input section in `js/main.js`.
+All tuning values (speeds, radii, intervals, timings) live in `CFG` at the top of `js/core.js`. The tilt sensitivity (`TILT_RANGE`, `TILT_DEAD`) is at the top of the input section in `js/main.js`. Music styles are plain data in `GENRES` in `js/music.js`: each has a tempo, scale, chord progression, a base groove, and a list of layers (one per echo) written as 16-step patterns, so adding a new style means adding one entry there.
 
 ## Develop
 
