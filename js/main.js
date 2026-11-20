@@ -2,6 +2,7 @@
 import { CFG, Game } from './core.js';
 import { Sound } from './audio.js';
 import { GENRES, GENRE_IDS } from './music.js';
+import { LANGS, LANG_IDS, setLang, t, fmt1, applyDom } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('game');
@@ -20,7 +21,7 @@ const ui = {
   haptic: $('haptic'),
   settings: $('settings'), settingsBtn: $('btn-settings'), pauseSettings: $('btn-pause-settings'),
   settingsDone: $('btn-settings-done'), genreList: $('genre-list'), genreDesc: $('genre-desc'),
-  previewDots: $('preview-dots'), volMusic: $('vol-music'), volSfx: $('vol-sfx'),
+  previewDots: $('preview-dots'), volMusic: $('vol-music'), volSfx: $('vol-sfx'), lang: $('lang-select'),
 };
 
 const PLAYER_HUE = 186;
@@ -55,6 +56,9 @@ const floaters = [];
 const trail = [];
 let sparkCombo = 0;
 let lastSparkTime = -10;
+let renderAlpha = 1;
+let hudTimeText = '';
+let hudEchoText = '';
 
 // ---------------------------------------------------------------------------
 // Layout
@@ -221,7 +225,7 @@ function recenterTilt() {
   calibrate();
   if (game && state === 'playing') {
     const p = game.player;
-    floaters.push({ x: p.x, y: p.y - 5, text: 'TILT RESET', life: 1, hue: PLAYER_HUE });
+    floaters.push({ x: p.x, y: p.y - 5, text: t('tiltReset'), life: 1, hue: PLAYER_HUE });
     burst(p.x, p.y, PLAYER_HUE, 10, 14, 0.4);
   }
   ui.recenter.animate?.([{ transform: 'rotate(0deg) scale(1.2)' }, { transform: 'rotate(180deg) scale(1)' }], { duration: 350 });
@@ -259,7 +263,7 @@ const endStick = (e) => { if (e.pointerId === stick.id) stick.id = null; };
 canvas.addEventListener('pointerup', endStick);
 canvas.addEventListener('pointercancel', endStick);
 document.addEventListener('touchmove', (e) => {
-  if (!(e.target instanceof Element && e.target.closest('input[type=range]'))) e.preventDefault();
+  if (!(e.target instanceof Element && e.target.closest('input[type=range], #settings'))) e.preventDefault();
 }, { passive: false });
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
@@ -324,14 +328,13 @@ function haptic(pattern = 40) {
 // Screens / flow
 // ---------------------------------------------------------------------------
 function show(el, on) { el.classList.toggle('hidden', !on); }
-function fmt(t) { return t.toFixed(1); }
+const fmt = fmt1; // one decimal, in the current language's number format
 
 function refreshTitle() {
   ui.titleBest.textContent = best > 0 ? fmt(best) : '–';
   const fine = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
-  if (fine && !('ontouchstart' in window)) {
-    ui.hint.innerHTML = 'Drag anywhere or use arrow keys / WASD to steer.<br>On iPhone, tilt to steer.';
-  }
+  ui.hint.innerHTML = t(fine && !('ontouchstart' in window) ? 'hintDesktop' : 'hintTilt');
+  ui.permNote.textContent = t('permDenied');
   ui.mute.innerHTML = sound.muted
     ? '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>'
     : '<svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
@@ -348,7 +351,6 @@ async function onStart() {
   const gotTilt = motionStatus === 'granted' ? await waitForTilt(600) : false;
   tilt.enabled = gotTilt;
   if (motionStatus === 'denied') {
-    ui.permNote.textContent = 'Motion access was denied — drag on the screen to steer. To use tilt, allow Motion & Orientation for this site and reload.';
     show(ui.permNote, true);
   }
   ui.start.disabled = ui.retry.disabled = false;
@@ -417,7 +419,7 @@ function showGameOver() {
   const score = game.score;
   const newBest = score > best + 1e-6;
   if (newBest) { best = score; saveBest(best); }
-  ui.goTime.textContent = fmt(game.time) + 's';
+  ui.goTime.textContent = fmt(game.time) + t('unit');
   ui.goEchoes.textContent = String(game.spawned);
   ui.goSparks.textContent = String(game.sparksCollected);
   ui.goScore.textContent = fmt(score);
@@ -460,9 +462,10 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 250));
 // Settings: music style + volumes (persisted)
 // ---------------------------------------------------------------------------
 const SETTINGS_KEY = 'echoThief.settings';
-const settings = { genre: 'ambient', musicVol: 0.8, sfxVol: 0.9 };
+const settings = { genre: 'ambient', musicVol: 0.8, sfxVol: 0.9, lang: 'auto' };
 try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* ignore */ }
 if (!GENRES[settings.genre]) settings.genre = 'ambient';
+if (settings.lang !== 'auto' && !LANGS[settings.lang]) settings.lang = 'auto';
 sound.configure(settings);
 
 function saveSettings() {
@@ -511,7 +514,6 @@ function buildSettingsUI() {
     b.type = 'button';
     b.setAttribute('role', 'radio');
     b.dataset.genre = id;
-    b.textContent = GENRES[id].name;
     b.addEventListener('click', () => {
       settings.genre = id;
       sound.configure({ genre: id });
@@ -537,11 +539,51 @@ function buildSettingsUI() {
   });
   ui.volSfx.addEventListener('change', () => { sound.chime(2); saveSettings(); });
   ui.volMusic.addEventListener('change', saveSettings);
+
+  for (const id of ['auto', ...LANG_IDS]) {
+    const o = document.createElement('option');
+    o.value = id;
+    o.textContent = id === 'auto' ? '' : LANGS[id].name; // language names stay in their own language
+    ui.lang.appendChild(o);
+  }
+  ui.lang.addEventListener('change', () => {
+    settings.lang = ui.lang.value;
+    saveSettings();
+    applyLanguage();
+  });
+}
+
+/** Shrink headings that are too wide for the screen in the current language (e.g. "EINSTELLUNGEN"). */
+function fitHeadings() {
+  for (const el of document.querySelectorAll('h2')) {
+    el.style.fontSize = '';
+    const hidden = el.closest('.overlay.hidden');
+    if (hidden) hidden.style.display = 'flex'; // measure even while its screen is hidden
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while (el.scrollWidth > el.clientWidth + 1 && size > 16) el.style.fontSize = `${--size}px`;
+    if (hidden) hidden.style.display = '';
+  }
+}
+window.addEventListener('resize', () => fitHeadings());
+
+/** Re-translate every visible string for the chosen language. */
+function applyLanguage() {
+  setLang(settings.lang);
+  applyDom();
+  fitHeadings();
+  ui.lang.options[0].textContent = t('auto');
+  hudTimeText = '';
+  refreshTitle();
+  refreshSettingsUI();
 }
 
 function refreshSettingsUI() {
-  for (const b of ui.genreList.children) b.setAttribute('aria-checked', String(b.dataset.genre === settings.genre));
-  ui.genreDesc.textContent = GENRES[settings.genre].desc;
+  for (const b of ui.genreList.children) {
+    b.textContent = b.dataset.genre === 'off' ? t('genre.off') : GENRES[b.dataset.genre].name;
+    b.setAttribute('aria-checked', String(b.dataset.genre === settings.genre));
+  }
+  ui.genreDesc.textContent = t('desc.' + settings.genre);
+  ui.lang.value = settings.lang;
   ui.volMusic.value = Math.round(settings.musicVol * 100);
   ui.volSfx.value = Math.round(settings.sfxVol * 100);
 }
@@ -581,6 +623,7 @@ function closeSettings() {
 }
 
 buildSettingsUI();
+applyLanguage();
 ui.settingsBtn.addEventListener('click', openSettings);
 ui.pauseSettings.addEventListener('click', openSettings);
 ui.settingsDone.addEventListener('click', closeSettings);
@@ -626,7 +669,7 @@ function handleEvents() {
         sound.musicDip(CFG.FADE_DURATION);
         flash = { t: 0.6, hue: 190 };
         burst(ev.x, ev.y, 190, 30, 35, 0.8);
-        floaters.push({ x: ev.x, y: ev.y, text: 'FADE', life: 1.1, hue: 190 });
+        floaters.push({ x: ev.x, y: ev.y, text: t('fade'), life: 1.1, hue: 190 });
         break;
       case 'death':
         sound.shatter();
@@ -908,9 +951,6 @@ function drawAttract() {
   }
 }
 
-let renderAlpha = 1;
-let hudTimeText = '';
-let hudEchoText = '';
 
 function render(dt) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);

@@ -36,7 +36,9 @@ Any static HTTPS host works too (Netlify, Cloudflare Pages, Vercel…).
 
 **Adaptive music:** every echo on the field adds its own instrument layer to the soundtrack, so the music builds up as the danger does. A melodic echo literally *plays its path*: its pitch follows how high the echo is in the arena, and its stereo position follows where it is left to right. When a Fade power-up hides the echoes, their instruments drop out with them. Pick the style under **Settings** (the sliders icon on the title screen, or **Settings** in the pause menu): **Ambient**, **Synthwave**, **Lo-fi**, **Chiptune**, **Techno**, or **Off**. The settings screen plays a live preview that adds an echo every few seconds, and also has music and effects volume sliders.
 
-All other audio is also synthesized with Web Audio: a chime when an echo spawns that rises in pitch as more echoes arrive, a shatter sound on death, and pickup sounds. On death you also get haptic feedback, via `navigator.vibrate` where supported, or the native-switch haptic trick on iOS 18+ (best effort; earlier iOS versions have no web haptics API). Your best score, mute and music settings are stored in `localStorage`.
+**Languages:** the game follows your phone's language automatically. You can also pick one under **Settings → Language**: English, Deutsch, Dansk, Svenska, Norsk, Nederlands, Français, Español, Italiano, Português, 日本語 or 简体中文. Numbers use the local format, e.g. `12,4 s`. All the text lives in `js/i18n.js`. To add a language, add an entry there; any string it leaves out falls back to English.
+
+All other audio is also synthesized with Web Audio: a chime when an echo spawns that rises in pitch as more echoes arrive, a shatter sound on death, and pickup sounds. On death you also get haptic feedback, via `navigator.vibrate` where supported, or the native-switch haptic trick on iOS 18+ (best effort; earlier iOS versions have no web haptics API). Your best score, mute, music and language settings are stored in `localStorage`.
 
 ## Project layout
 
@@ -47,6 +49,7 @@ js/core.js            Pure deterministic simulation (no DOM): physics, recording
 js/main.js            Rendering, input (tilt / drag / keys), screens, game loop
 js/audio.js           Sound effects, volume buses, music phases
 js/music.js           Adaptive step-sequencer music: genres, instruments, echo layers
+js/i18n.js            Translations, language detection, number formatting
 sw.js                 Service worker (offline cache) – bump VERSION when files change
 manifest.webmanifest  PWA manifest (standalone, portrait)
 icons/                App icons (SVG source + PNGs)

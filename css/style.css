@@ -197,7 +197,16 @@ h2.shatter { color: #ff7aa8; text-shadow: 0 0 20px rgba(255, 90, 140, 0.8); }
 
 /* ---------- Settings ---------- */
 #settings .panel { gap: 14px; }
-#settings h2 { font-size: 32px; }
+#settings h2 { font-size: 30px; }
+h2 { white-space: nowrap; max-width: 100%; }
+@media (max-height: 700px) {
+  #settings .panel { gap: 9px; }
+  #settings h2 { font-size: 26px; }
+  #settings .chip { min-height: 38px; }
+  #settings .btn { min-height: 48px; }
+  #settings .hint { font-size: 12px; line-height: 1.4; }
+  #settings .slider select { min-height: 36px; }
+}
 .setting { width: 100%; display: flex; flex-direction: column; gap: 10px; }
 .setting > .label, .slider .label { font-size: 11px; letter-spacing: 0.18em; color: var(--dim); text-align: left; }
 .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -228,6 +237,22 @@ h2.shatter { color: #ff7aa8; text-shadow: 0 0 20px rgba(255, 90, 140, 0.8); }
 .dots i.on { opacity: 1; transform: scale(1.15); box-shadow: 0 0 8px currentColor; background: currentColor; }
 .slider { width: 100%; display: grid; grid-template-columns: 80px 1fr; align-items: center; gap: 12px; }
 .slider input { width: 100%; accent-color: var(--neon); touch-action: auto; height: 28px; }
+.slider select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 34px 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(111, 243, 255, 0.35);
+  background: rgba(10, 14, 30, 0.75) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236ff3ff' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center / 12px 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px; /* 16px stops iOS zooming in on focus */
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* Settings can be taller than small phones: scroll inside the overlay, centred when it fits. */
+#settings { overflow-y: auto; touch-action: pan-y; align-items: flex-start; }
+#settings .panel { margin: auto 0; }
 
 /* Ask for portrait on touch devices in landscape. */
 #rotate { display: none; background: var(--bg); z-index: 10; }

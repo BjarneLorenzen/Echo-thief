@@ -17,18 +17,18 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <canvas id="game" aria-label="Game arena"></canvas>
+  <canvas id="game" aria-label="Game arena" data-i18n-aria="aria.arena"></canvas>
   <!-- Invisible element whose box defines the arena (respects iPhone safe areas). -->
   <div id="frame" aria-hidden="true"></div>
 
   <header id="hud" class="hidden">
-    <div class="stat left"><span class="label">ECHOES</span><span id="hud-echoes" class="value">0</span></div>
+    <div class="stat left"><span class="label" data-i18n="echoes">ECHOES</span><span id="hud-echoes" class="value">0</span></div>
     <div class="stat center"><span id="hud-time" class="value big">0.0</span></div>
     <div class="stat right">
-      <button id="btn-recenter" class="icon-btn hidden" aria-label="Reset tilt angle" title="Reset tilt: your current angle becomes neutral">
+      <button id="btn-recenter" class="icon-btn hidden" aria-label="Reset tilt angle" title="Reset tilt angle" data-i18n-aria="aria.recenter">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
       </button>
-      <button id="btn-pause" class="icon-btn" aria-label="Pause">
+      <button id="btn-pause" class="icon-btn" aria-label="Pause" data-i18n-aria="aria.pause">
         <svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
       </button>
     </div>
@@ -37,64 +37,65 @@
   <section id="title" class="overlay">
     <div class="panel">
       <h1 class="logo">ECHO<br><span>THIEF</span></h1>
-      <p class="tagline">Every 10 seconds, your past comes back.</p>
-      <button id="btn-start" class="btn primary">START</button>
-      <p class="best">BEST <span id="title-best">–</span></p>
+      <p class="tagline" data-i18n="tagline">Every 10 seconds, your past comes back.</p>
+      <button id="btn-start" class="btn primary" data-i18n="start">START</button>
+      <p class="best"><span data-i18n="best">BEST</span> <span id="title-best">–</span></p>
       <p id="control-hint" class="hint">Tilt your phone to steer.<br>Hold it the way that feels neutral — that's "still".</p>
       <p id="perm-note" class="hint warn hidden"></p>
     </div>
-    <button id="btn-settings" class="icon-btn corner left" aria-label="Settings">
+    <button id="btn-settings" class="icon-btn corner left" aria-label="Settings" data-i18n-aria="aria.settings">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
     </button>
-    <button id="btn-mute" class="icon-btn corner" aria-label="Toggle sound"></button>
+    <button id="btn-mute" class="icon-btn corner" aria-label="Toggle sound" data-i18n-aria="aria.mute"></button>
   </section>
 
   <section id="settings" class="overlay hidden">
     <div class="panel">
-      <h2>SETTINGS</h2>
+      <h2 data-i18n="settings">SETTINGS</h2>
       <div class="setting">
-        <span class="label">MUSIC STYLE</span>
+        <span class="label" data-i18n="musicStyle">MUSIC STYLE</span>
         <div id="genre-list" class="chips" role="radiogroup" aria-label="Music style"></div>
         <p id="genre-desc" class="hint tight"></p>
       </div>
       <div class="preview" aria-live="off">
         <div id="preview-dots" class="dots"></div>
-        <p class="hint tight">Every echo adds an instrument. Its pitch follows the echo's height, its stereo position follows left&nbsp;↔&nbsp;right.</p>
+        <p class="hint tight" data-i18n="previewHint">Every echo adds an instrument. Its pitch follows the echo's height, its stereo position follows left&nbsp;↔&nbsp;right.</p>
       </div>
-      <label class="slider"><span class="label">MUSIC</span><input id="vol-music" type="range" min="0" max="100" step="1"></label>
-      <label class="slider"><span class="label">EFFECTS</span><input id="vol-sfx" type="range" min="0" max="100" step="1"></label>
-      <button id="btn-settings-done" class="btn primary">DONE</button>
+      <label class="slider"><span class="label" data-i18n="music">MUSIC</span><input id="vol-music" type="range" min="0" max="100" step="1"></label>
+      <label class="slider"><span class="label" data-i18n="effects">EFFECTS</span><input id="vol-sfx" type="range" min="0" max="100" step="1"></label>
+      <label class="slider"><span class="label" data-i18n="language">LANGUAGE</span><select id="lang-select"></select></label>
+      <button id="btn-settings-done" class="btn primary" data-i18n="done">DONE</button>
     </div>
   </section>
 
   <section id="pause" class="overlay hidden">
     <div class="panel">
-      <h2>PAUSED</h2>
-      <button id="btn-resume" class="btn primary">RESUME</button>
-      <button id="btn-pause-settings" class="btn ghost">SETTINGS</button>
-      <button id="btn-quit" class="btn ghost">MENU</button>
-      <p class="hint">Hold your phone in a comfortable neutral position before resuming.</p>
+      <h2 data-i18n="paused">PAUSED</h2>
+      <button id="btn-resume" class="btn primary" data-i18n="resume">RESUME</button>
+      <button id="btn-pause-settings" class="btn ghost" data-i18n="settings">SETTINGS</button>
+      <button id="btn-quit" class="btn ghost" data-i18n="menu">MENU</button>
+      <p class="hint" data-i18n="pauseHint">Hold your phone in a comfortable neutral position before resuming.</p>
     </div>
   </section>
 
   <section id="gameover" class="overlay hidden">
     <div class="panel">
-      <h2 class="shatter">CAUGHT</h2>
-      <p id="go-newbest" class="newbest hidden">NEW BEST</p>
+      <h2 class="shatter" data-i18n="caught">CAUGHT</h2>
+      <p id="go-newbest" class="newbest hidden" data-i18n="newBest">NEW BEST</p>
       <div class="results">
-        <div><span class="label">TIME SURVIVED</span><span id="go-time" class="value">0.0s</span></div>
-        <div><span class="label">ECHOES DODGED</span><span id="go-echoes" class="value">0</span></div>
-        <div><span class="label">SPARKS</span><span id="go-sparks" class="value">0</span></div>
-        <div><span class="label">SCORE</span><span id="go-score" class="value">0.0</span></div>
-        <div><span class="label">BEST</span><span id="go-best" class="value">0.0</span></div>
+        <div><span class="label" data-i18n="timeSurvived">TIME SURVIVED</span><span id="go-time" class="value">0.0s</span></div>
+        <div><span class="label" data-i18n="echoesDodged">ECHOES DODGED</span><span id="go-echoes" class="value">0</span></div>
+        <div><span class="label" data-i18n="sparks">SPARKS</span><span id="go-sparks" class="value">0</span></div>
+        <div><span class="label" data-i18n="score">SCORE</span><span id="go-score" class="value">0.0</span></div>
+        <div><span class="label" data-i18n="best">BEST</span><span id="go-best" class="value">0.0</span></div>
       </div>
-      <button id="btn-retry" class="btn primary">RETRY</button>
-      <button id="btn-menu" class="btn ghost">MENU</button>
+      <button id="btn-retry" class="btn primary" data-i18n="retry">RETRY</button>
+      <button id="btn-menu" class="btn ghost" data-i18n="menu">MENU</button>
     </div>
   </section>
 
   <div id="rotate" class="overlay">
-    <div class="panel"><p>Rotate your phone to portrait</p></div>
+    <div class="panel"><p data-i18n="rotate">Rotate your phone to portrait</p></div>
   </div>
 
   <!-- iOS 18+ haptics: toggling a native switch triggers the Taptic Engine. -->
