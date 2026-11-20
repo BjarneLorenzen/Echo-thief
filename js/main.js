@@ -12,7 +12,7 @@ const ui = {
   hud: $('hud'), hudTime: $('hud-time'), hudEchoes: $('hud-echoes'),
   title: $('title'), pause: $('pause'), over: $('gameover'),
   start: $('btn-start'), resume: $('btn-resume'), quit: $('btn-quit'),
-  retry: $('btn-retry'), menu: $('btn-menu'), pauseBtn: $('btn-pause'), mute: $('btn-mute'),
+  retry: $('btn-retry'), menu: $('btn-menu'), pauseBtn: $('btn-pause'), recenter: $('btn-recenter'), mute: $('btn-mute'),
   titleBest: $('title-best'), hint: $('control-hint'), permNote: $('perm-note'),
   goTime: $('go-time'), goEchoes: $('go-echoes'), goSparks: $('go-sparks'),
   goScore: $('go-score'), goBest: $('go-best'), goNewBest: $('go-newbest'),
@@ -211,6 +211,18 @@ function calibrate() {
   tilt.sx = tilt.sy = 0;
 }
 
+/** HUD button: make the phone's current angle the new "still" position. */
+function recenterTilt() {
+  calibrate();
+  if (game && state === 'playing') {
+    const p = game.player;
+    floaters.push({ x: p.x, y: p.y - 5, text: 'TILT RESET', life: 1, hue: PLAYER_HUE });
+    burst(p.x, p.y, PLAYER_HUE, 10, 14, 0.4);
+  }
+  ui.recenter.animate?.([{ transform: 'rotate(0deg) scale(1.2)' }, { transform: 'rotate(180deg) scale(1)' }], { duration: 350 });
+  haptic(15);
+}
+
 function tiltAxis(deg) {
   const a = Math.abs(deg);
   if (a < TILT_DEAD) return 0;
@@ -251,6 +263,7 @@ const KEYMAP = {
 };
 window.addEventListener('keydown', (e) => {
   if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); }
+  if (e.code === 'KeyC' && state === 'playing') recenterTilt();
   if (e.code === 'Escape' || e.code === 'KeyP') {
     if (state === 'playing') pauseGame();
     else if (state === 'paused') resumeGame();
@@ -339,6 +352,7 @@ function beginRun() {
   computeView();
   buildBackground();
   calibrate();
+  show(ui.recenter, tilt.enabled);
   particles.length = floaters.length = trail.length = 0;
   sparkCombo = 0;
   lastSparkTime = -10;
@@ -411,6 +425,7 @@ ui.retry.addEventListener('click', onStart);
 ui.menu.addEventListener('click', toMenu);
 ui.quit.addEventListener('click', toMenu);
 ui.pauseBtn.addEventListener('click', pauseGame);
+ui.recenter.addEventListener('click', recenterTilt);
 ui.resume.addEventListener('click', resumeGame);
 ui.mute.addEventListener('click', () => {
   sound.unlock();

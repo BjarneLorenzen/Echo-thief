@@ -61,7 +61,8 @@ canvas#game {
 }
 #hud .stat { display: flex; flex-direction: column; }
 #hud .left { align-items: flex-start; }
-#hud .right { align-items: flex-end; }
+#hud .right { flex-direction: row; justify-content: flex-end; gap: 10px; }
+#hud .icon-btn.hidden { display: none; }
 #hud .label { font-size: 10px; letter-spacing: 0.18em; color: var(--dim); }
 #hud .value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 #hud .value.big {

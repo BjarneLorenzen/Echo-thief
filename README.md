@@ -19,9 +19,9 @@ Any static HTTPS host works too (Netlify, Cloudflare Pages, Vercel…).
 
 | Device | Control |
 |---|---|
-| iPhone | **Tilt** to steer. Your hand position when you tap Start (or Resume) counts as "neutral". |
+| iPhone | **Tilt** to steer. Your hand position when you tap Start (or Resume) counts as "neutral". Tap the **crosshair button** (top right) at any time to make your current angle the new neutral. |
 | Touch fallback | Drag anywhere for a floating joystick. This also works if you denied motion access. |
-| Desktop | Mouse drag, or arrow keys / WASD. Enter starts a run, Esc / P pauses. |
+| Desktop | Mouse drag, or arrow keys / WASD. Enter starts a run, Esc / P pauses, C resets the tilt angle. |
 
 ## Rules & mechanics
 
