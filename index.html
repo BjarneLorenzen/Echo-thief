@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Echo Thief</title>
+  <meta name="description" content="Tilt to steer a ghost. Every 10 seconds, your past self comes back to haunt you.">
+  <meta name="theme-color" content="#05060d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Echo Thief">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Game arena"></canvas>
+  <!-- Invisible element whose box defines the arena (respects iPhone safe areas). -->
+  <div id="frame" aria-hidden="true"></div>
+
+  <header id="hud" class="hidden">
+    <div class="stat left"><span class="label">ECHOES</span><span id="hud-echoes" class="value">0</span></div>
+    <div class="stat center"><span id="hud-time" class="value big">0.0</span></div>
+    <div class="stat right">
+      <button id="btn-pause" class="icon-btn" aria-label="Pause">
+        <svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section id="title" class="overlay">
+    <div class="panel">
+      <h1 class="logo">ECHO<br><span>THIEF</span></h1>
+      <p class="tagline">Every 10 seconds, your past comes back.</p>
+      <button id="btn-start" class="btn primary">START</button>
+      <p class="best">BEST <span id="title-best">–</span></p>
+      <p id="control-hint" class="hint">Tilt your phone to steer.<br>Hold it the way that feels neutral — that's "still".</p>
+      <p id="perm-note" class="hint warn hidden"></p>
+    </div>
+    <button id="btn-mute" class="icon-btn corner" aria-label="Toggle sound"></button>
+  </section>
+
+  <section id="pause" class="overlay hidden">
+    <div class="panel">
+      <h2>PAUSED</h2>
+      <button id="btn-resume" class="btn primary">RESUME</button>
+      <button id="btn-quit" class="btn ghost">MENU</button>
+      <p class="hint">Hold your phone in a comfortable neutral position before resuming.</p>
+    </div>
+  </section>
+
+  <section id="gameover" class="overlay hidden">
+    <div class="panel">
+      <h2 class="shatter">CAUGHT</h2>
+      <p id="go-newbest" class="newbest hidden">NEW BEST</p>
+      <div class="results">
+        <div><span class="label">TIME SURVIVED</span><span id="go-time" class="value">0.0s</span></div>
+        <div><span class="label">ECHOES DODGED</span><span id="go-echoes" class="value">0</span></div>
+        <div><span class="label">SPARKS</span><span id="go-sparks" class="value">0</span></div>
+        <div><span class="label">SCORE</span><span id="go-score" class="value">0.0</span></div>
+        <div><span class="label">BEST</span><span id="go-best" class="value">0.0</span></div>
+      </div>
+      <button id="btn-retry" class="btn primary">RETRY</button>
+      <button id="btn-menu" class="btn ghost">MENU</button>
+    </div>
+  </section>
+
+  <div id="rotate" class="overlay">
+    <div class="panel"><p>Rotate your phone to portrait</p></div>
+  </div>
+
+  <!-- iOS 18+ haptics: toggling a native switch triggers the Taptic Engine. -->
+  <label id="haptic" aria-hidden="true"><input type="checkbox" switch tabindex="-1"></label>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
